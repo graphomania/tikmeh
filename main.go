@@ -168,6 +168,12 @@ func DownloadVideosHD(videos []VideoInfo, directory ...string) (nothingNewLeft b
 	} else {
 		dir = path.Join(DefaultWorkingDirectory, videos[0].Author.UniqueId)
 	}
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err := os.Mkdir(dir, 0777)
+		if err != nil {
+			return false, err
+		}
+	}
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
 		return false, err
