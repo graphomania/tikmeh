@@ -65,4 +65,4 @@ You don't have to trust me, building from sources is always an option.
 - [ ] – become independent of tikwm to improve performance multiple times.
 - [ ] – embed `ffmpeg` a way that don't require the user to download `ffmpeg` somewhere separately  
 
-#### Special thanks to [2ch.hk/media](2ch.hk/media) community for suggesting tikwm.com
+#### Special thanks to [2ch.hk/media](https://2ch.hk/media) community for suggesting tikwm.com
