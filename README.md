@@ -1,4 +1,5 @@
 ## Tikmeh
+#### 0.1.0 (Sep 26, 2022)
 
 Single executable to **download videos, profiles, sync your collection** with authors in one command with the best
 quality available.
