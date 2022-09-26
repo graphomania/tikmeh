@@ -4,6 +4,8 @@ Single executable to **download videos, profiles, sync your collection** with au
 quality available.
 No installation required, you don't have to use Terminal.
 
+I was asked to add conversion to `h.264`, so now Tikmeh could access user-provided `ffmpeg`, by default the system's one.
+
 - tikmeh.exe – Windows (amd64) executable (compatible even with Win7)
 - tikmeh – Linux (amd64) executable
 
@@ -14,14 +16,17 @@ No installation required, you don't have to use Terminal.
 - `tikmeh profile @shrimpydimpy @losertron`                    – download all @shrimpydimpy, @losertron
   videos to `./shrimpydimpy`, `./losertron` accordingly
 - `tikmeh directory ./mp4 profile @shrimpydimpy`            – download all @shrimpydimpy videos to `./mp4`
+- `tikmeh directory ./mp4 profile @shrimpydimpy`            – download all @shrimpydimpy videos to `./mp4`
+- `tikmeh profile @shrimpydimpy convert ffmpeg-path ./ffmpeg.exe`    – download and convert videos to h264 with `./ffmpeg.exe`
+- `tikmeh profile @shrimpydimpy check-all`          – download all missing videos, ensure every video is downloaded
 
 ### Sync?
 
 Yes, literally synchronization. Just download a profile once in full and Tikmeh wouldn't re-upload already downloaded
 videos.  
 
-Note: Tikmeh loads the profile until it meets already downloaded video, so for initial download providing an empty
-directory is recommended.
+Note: by default Tikmeh loads the profile until it meets already downloaded video, 
+to ensure nothing is skipped, use `check-all` flag.
 By default, directory named after the profile username is created.
 
 ### Interactive mode
@@ -30,7 +35,7 @@ Exists mainly for Windows users, which usually don't like to use Terminal, so th
 simple python-like environment.
 
 ```
-Tikmeh 0.0.1 (Sep 20, 2022) Sources and up-to-date executables: https://github.com/mehanon/tikmeh
+Tikmeh 0.1.0 (Sep 26, 2022) Sources and up-to-date executables: https://github.com/mehanon/tikmeh
 Enter 'help' to get help message.
 >>> directory mp4 tiktok.com/@shrimpydimpy/video/7133412834960018730
 mp4/shrimpydimpy_2022-08-19_7133412834960018730.mp4
@@ -63,6 +68,7 @@ You don't have to trust me, building from sources is always an option.
 ### TODO:
 
 - [ ] – become independent of tikwm to improve performance multiple times.
-- [ ] – embed `ffmpeg` a way that don't require the user to download `ffmpeg` somewhere separately  
+- [ ] – embed `ffmpeg` a way that don't require the user to download `ffmpeg` somewhere separately
+  (is somewhat realised, but ffmpeg has to be provided by user)
 
 #### Special thanks to [2ch.hk/media](https://2ch.hk/media) community for suggesting tikwm.com

@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"runtime"
 	"strings"
@@ -18,14 +19,20 @@ import (
 	"time"
 )
 
-const GithubLink = "https://github.com/mehanon/tikmeh"
-const DefaultWorkingDirectory = "."
-const PackageName = "Tikmeh"
-const VersionInfo = "0.0.1 (Sep 20, 2022)"
+const (
+	PackageName             = "Tikmeh"
+	VersionInfo             = "0.1.0 (Sep 26, 2022)"
+	GithubLink              = "https://github.com/mehanon/tikmeh"
+	DefaultWorkingDirectory = "."
+	DefaultFfmpegPath       = "ffmpeg"
+	DefaultFfmpegPreset     = "faster"
+)
 
-var tikwmTimeout = 12 * time.Second
-var tikwnLastReqestTime = time.Time{}
-var tikwmReqestMutex = sync.Mutex{}
+var (
+	tikwmTimeout        = 12 * time.Second
+	tikwnLastReqestTime = time.Time{}
+	tikwmReqestMutex    = sync.Mutex{}
+)
 
 func syncTikwmRequests() {
 	tikwmReqestMutex.Lock()
@@ -128,9 +135,6 @@ type VideoInfo struct {
 }
 
 func TikwnGetPostsInfo(username string, cursor ...string) (*TikwmPostsResponse, error) {
-	if !strings.HasPrefix(username, "@") {
-		username = "@" + username
-	}
 	c := "0"
 	if len(cursor) > 0 {
 		c = cursor[0]
@@ -158,7 +162,15 @@ func TikwnGetPostsInfo(username string, cursor ...string) (*TikwmPostsResponse, 
 	return &resp, nil
 }
 
-func DownloadVideosHD(videos []VideoInfo, directory ...string) (nothingNewLeft bool, err error) {
+type ProfileDownloader struct {
+	Cfg parsedArgs
+}
+
+func NewProfileDownloader(args *parsedArgs) *ProfileDownloader {
+	return &ProfileDownloader{Cfg: *args}
+}
+
+func (loader *ProfileDownloader) DownloadVideosHD(videos []VideoInfo, directory ...string) (isNothingNewLeft bool, err error) {
 	if len(videos) == 0 {
 		return false, errors.New("0 videos provided to DownloadVideosHD")
 	}
@@ -167,12 +179,6 @@ func DownloadVideosHD(videos []VideoInfo, directory ...string) (nothingNewLeft b
 		dir = directory[0]
 	} else {
 		dir = path.Join(DefaultWorkingDirectory, videos[0].Author.UniqueId)
-	}
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		err := os.Mkdir(dir, 0777)
-		if err != nil {
-			return false, err
-		}
 	}
 	dirEntries, err := os.ReadDir(dir)
 	if err != nil {
@@ -185,32 +191,58 @@ func DownloadVideosHD(videos []VideoInfo, directory ...string) (nothingNewLeft b
 		}
 	}
 
-	downloaded := make([]string, 0)
 	for _, videoInfo := range videos {
 		if isContainedInList(generateFilename(videoInfo.Author.UniqueId, videoInfo.CreateTime, videoInfo.VideoId), files) {
-			return true, nil
+			if loader.Cfg.CheckAll {
+				continue
+			} else {
+				return true, nil
+			}
 		}
+
 		filename, err := DownloadTiktokTikwm(fmt.Sprintf("https://www.tiktok.com/@%s/%s", videoInfo.Author.UniqueId, videoInfo.VideoId), dir)
 		if err != nil {
 			return false, err
 		}
-		fmt.Printf("    %s\n", *filename)
-		downloaded = append(downloaded, *filename)
+		fmt.Printf("    %s", *filename)
+		if loader.Cfg.Convert {
+			print("    converting... ")
+			_, err = convertToH264(*filename, loader.Cfg.FfmpegPath)
+			if err != nil {
+				log.Printf("while converting %s, an error occured: %s", *filename, err.Error())
+			} else {
+				print("done")
+			}
+		}
+		println()
 	}
 
 	return false, err
 }
 
-func DownloadProfileTikwm(username string, directory ...string) error {
-	for info, err := TikwnGetPostsInfo(username, "0"); ; {
+func (loader *ProfileDownloader) DownloadProfileTikwm(username string) error {
+	var dir string
+	if loader.Cfg.Directory == "" {
+		dir = path.Join(DefaultWorkingDirectory, strings.ToLower(strings.Trim(username, " \n@")))
+	} else {
+		dir = loader.Cfg.Directory
+	}
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err := os.Mkdir(dir, 0777)
 		if err != nil {
 			return err
 		}
-		nothingNewLeft, err := DownloadVideosHD(info.Data.Videos, directory...)
+	}
+
+	for info, err := TikwnGetPostsInfo(username, "0"); info != nil; {
 		if err != nil {
 			return err
 		}
-		if nothingNewLeft {
+		isNothingNewToCheck, err := loader.DownloadVideosHD(info.Data.Videos, dir)
+		if err != nil {
+			return err
+		}
+		if isNothingNewToCheck {
 			break
 		}
 		if !info.Data.HasMore {
@@ -222,21 +254,29 @@ func DownloadProfileTikwm(username string, directory ...string) error {
 }
 
 type parsedArgs struct {
-	Help      bool
-	Profile   bool
-	Exit      bool
-	Directory string
-	Tail      []string
+	Help       bool
+	Exit       bool
+	Profile    bool
+	CheckAll   bool
+	Directory  string
+	Convert    bool
+	FfmpegPath string
+	Tail       []string
 }
 
 func parseArgs(args []string) (parsed *parsedArgs) {
 	parsed = &parsedArgs{
-		Help:      false,
-		Profile:   false,
-		Directory: "",
-		Tail:      make([]string, 0),
+		Help:       false,
+		Exit:       false,
+		Profile:    false,
+		CheckAll:   false,
+		Directory:  "",
+		Convert:    false,
+		FfmpegPath: DefaultFfmpegPath,
+		Tail:       make([]string, 0),
 	}
 	gettingDir := false
+	gettingFfmpegPath := false
 	for _, arg := range args {
 		if isContainedInList(arg, []string{"h", "help", "-h", "--help", "-help"}) {
 			parsed.Help = true
@@ -246,71 +286,81 @@ func parseArgs(args []string) (parsed *parsedArgs) {
 			parsed.Exit = true
 		} else if isContainedInList(arg, []string{"-d", "directory"}) {
 			gettingDir = true
+		} else if isContainedInList(arg, []string{"-c", "convert"}) {
+			parsed.Convert = true
+		} else if isContainedInList(arg, []string{"-a", "check-all"}) {
+			parsed.CheckAll = true
+		} else if isContainedInList(arg, []string{"-F", "ffmpeg-path"}) {
+			gettingFfmpegPath = true
 		} else if gettingDir {
 			parsed.Directory = arg
 			gettingDir = false
+		} else if gettingFfmpegPath {
+			parsed.FfmpegPath = arg
+			gettingFfmpegPath = false
 		} else {
 			parsed.Tail = append(parsed.Tail, arg)
 		}
 	}
+
+	if parsed.Directory == "" && !parsed.Profile {
+		parsed.Directory = DefaultWorkingDirectory
+	}
+
 	return parsed
+}
+
+func printHelpMessage() {
+	fmt.Printf(
+		"%s %s\n"+
+			"Download TikTok videos/profile in the best quality.\n"+
+			"Usage: %s [OPTION]... [LINKS/USERNAMES]...\n", PackageName, VersionInfo, os.Args[0])
+	if runtime.GOOS == "windows" {
+		fmt.Print("Note: windows firewall could block the script from accessing the internet\n")
+	}
+	fmt.Printf(
+		"\n"+
+			"With no arguments starts in python-like interactive mode.\n"+
+			"(it doesn't support argruments with spaces right now, while in command-line works fine)\n"+
+			"\n"+
+			"Options:\n"+
+			"  -p, profile             download profiles mode\n"+
+			"                            note: the script downloads videos from the most recent one,\n"+
+			"                            until it meets already downloaded one, making syncing local collection easy\n"+
+			"  -a, check-all           don't stop when an alredy downloaded video is met, to ensure everything is downloaded\n"+
+			"  -d, directory <dir>     download directory, default <dir>=username for profiles or current for videos (created if not found)\n"+
+			"  -c, convert             convert uploaded files to h264\n"+
+			"  -F, ffmpeg-path <path>  path to ffmpeg, default <path>=%s (ffmpeg isn't required, unless you use 'convert')\n"+
+			"\n"+
+			"Examples:\n"+
+			"  %s                                                     start interactive mode\n"+
+			"  %s tiktok.com/@shrimpydimpy/video/7133412834960018730  simply download this tiktok\n"+
+			"  %s profile @shrimpydimpy @losertron                    download all @shrimpydimpy, @losertron\n"+
+			"  %s                                                     videos to ./shrimpydimpy, ./losertron accordinaly\n"+
+			"  %s directory ./goddes profile @shrimpydimpy            download all @shrimpydimpy videos to ./goddes/\n"+
+			"  %s profile @shrimpydimpy convert -F ./ffmpeg.exe       download and convert videos to h264\n"+
+			"\n"+
+			"Source files and up-to-date executables: %s\n",
+		DefaultFfmpegPath, os.Args[0], os.Args[0], os.Args[0], strings.Repeat(" ", len(os.Args[0])), os.Args[0], os.Args[0], GithubLink)
+	return
 }
 
 func HandleArgs(args []string) {
 	arguments := parseArgs(args)
 
 	if arguments.Help {
-		fmt.Printf(
-			"%s %s\n"+
-				"Download TikTok videos/profile in the best quality.\n"+
-				"Usage: %s [OPTION]... [LINKS/USERNAMES]...\n", PackageName, VersionInfo, os.Args[0])
-		if runtime.GOOS == "windows" {
-			fmt.Print("Note: windows firewall could block the script from accessing the internet\n")
-		}
-		fmt.Printf(
-			"\n"+
-				"With no arguments starts in python-like interactive mode.\n"+
-				"(it doesn't support directories with spaces right now, while in command-line works fine)\n"+
-				"\n"+
-				"Options:\n"+
-				"  -p, profile          download profiles, if no directory is specified <dir>=username\n"+
-				"                       note: the script downloads videos from the most recent one,\n"+
-				"                       until it meets already downloaded one, making syncing local collection easy\n"+
-				"  -d, directory <dir>  download directory\n"+
-				"\n"+
-				"Examples:\n"+
-				"  %s                                                     start interactive mode\n"+
-				"  %s tiktok.com/@shrimpydimpy/video/7133412834960018730  simply download this tiktok\n"+
-				"  %s profile @shrimpydimpy @losertron                    download all @shrimpydimpy, @losertron\n"+
-				"  %s                                                     videos to ./shrimpydimpy, ./losertron accordinaly\n"+
-				"  %s directory ./goddes profile @shrimpydimpy            download all @shrimpydimpy videos to ./goddes/\n"+
-				"\n"+
-				"Source files and up-to-date executables: %s\n", os.Args[0], os.Args[0], os.Args[0], strings.Repeat(" ", len(os.Args[0])), os.Args[0], GithubLink)
+		printHelpMessage()
 		return
 	}
 	if arguments.Exit {
 		os.Exit(0)
 	}
 
-	directory := make([]string, 0)
-	if arguments.Directory == "" && !arguments.Profile {
-		arguments.Directory = DefaultWorkingDirectory
-	}
-	if arguments.Directory != "" {
-		directory = append(directory, arguments.Directory)
-		if _, err := os.Stat(arguments.Directory); os.IsNotExist(err) {
-			err := os.Mkdir(arguments.Directory, 0777)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-		}
-	}
-
 	if arguments.Profile {
+		downloader := NewProfileDownloader(arguments)
 		for _, username := range arguments.Tail {
 			fmt.Printf("loading `%s` profile...\n", username)
-			err := DownloadProfileTikwm(username, directory...)
+			err := downloader.DownloadProfileTikwm(username)
 			if err != nil {
 				log.Printf("%v", err)
 				return
@@ -318,8 +368,15 @@ func HandleArgs(args []string) {
 			println("done.")
 		}
 	} else {
+		if _, err := os.Stat(arguments.Directory); os.IsNotExist(err) {
+			err := os.Mkdir(arguments.Directory, 0777)
+			if err != nil {
+				log.Printf("while creating directory %s, an error occured: %s", arguments.Directory, err.Error())
+				return
+			}
+		}
 		for _, link := range arguments.Tail {
-			filename, err := DownloadTiktokTikwm(link, directory...)
+			filename, err := DownloadTiktokTikwm(link, arguments.Directory)
 			if err != nil {
 				log.Printf("%v", err)
 				return
@@ -327,6 +384,26 @@ func HandleArgs(args []string) {
 			println(*filename)
 		}
 	}
+}
+
+func convertToH264(filename string, ffmpegPath ...string) (string, error) {
+	var ffmpeg string
+	if len(ffmpegPath) == 0 {
+		ffmpeg = DefaultFfmpegPath
+	} else {
+		ffmpeg = ffmpegPath[0]
+	}
+
+	h264Filename := fmt.Sprintf("%s.h264.mp4", filename)
+	output, err := exec.Command(ffmpeg, "-i", filename, "-vcodec", "libx264", "-acodec", "aac", "-y", "-preset", DefaultFfmpegPreset, h264Filename).Output()
+	if err != nil {
+		return filename, errors.New(fmt.Sprintf("while converting %s, an error occured:\n%s\n%s", filename, err.Error(), string(output)))
+	}
+	err = os.Rename(h264Filename, filename)
+	if err != nil {
+		return h264Filename, errors.New(fmt.Sprintf("while converting %s, an error occured:\n%s\n%s", filename, err.Error(), string(output)))
+	}
+	return filename, nil
 }
 
 func Wget(url string, filename string) error {
