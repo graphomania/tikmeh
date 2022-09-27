@@ -17,7 +17,6 @@ I was asked to add conversion to `h.264`, so now Tikmeh could access user-provid
 - `tikmeh profile @shrimpydimpy @losertron`                    – download all @shrimpydimpy, @losertron
   videos to `./shrimpydimpy`, `./losertron` accordingly
 - `tikmeh directory ./mp4 profile @shrimpydimpy`            – download all @shrimpydimpy videos to `./mp4`
-- `tikmeh directory ./mp4 profile @shrimpydimpy`            – download all @shrimpydimpy videos to `./mp4`
 - `tikmeh profile @shrimpydimpy convert ffmpeg-path ./ffmpeg.exe`    – download and convert videos to h264 with `./ffmpeg.exe`
 - `tikmeh profile @shrimpydimpy check-all`          – download all missing videos, ensure every video is downloaded
 
