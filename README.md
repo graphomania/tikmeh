@@ -1,31 +1,33 @@
 ## Tikmeh
-#### 0.1.0 (Sep 26, 2022)
+
+#### 0.2.0 (Nov 4, 2022)
 
 Single executable to **download videos, profiles, sync your collection** with authors in one command with the best
 quality available.
 No installation required, you don't have to use Terminal.
 
-I was asked to add conversion to `h.264`, so now Tikmeh could access user-provided `ffmpeg`, by default the system's one.
+I was asked to add conversion to `h.264`, so now Tikmeh could access user-provided `ffmpeg`, by default the system's
+one.
 
-- tikmeh.exe – Windows (amd64) executable (compatible even with Win7)
-- tikmeh – Linux (amd64) executable
+- [tikmeh.exe](https://) – Windows (amd64) executable (compatible even with Win7)
+- [tikmeh]() – Linux (amd64) executable
 
 ### Examples:
 
 - `tikmeh`  – interactive mode (more on that later)
-- `tikmeh tiktok.com/@shrimpydimpy/video/7133412834960018730`  – simply download the video
-- `tikmeh profile @shrimpydimpy @losertron`                    – download all @shrimpydimpy, @losertron
+- `tikmeh tiktok.com/@shrimpydimpy/video/7133412834960018730` – simply download the video
+- `tikmeh --convert --directory goddess 7133412834960018730` – download to ./goddess and convert to h.264
+- `tikmeh profile shrimpydimpy losertron` – download all their videos to ./shrimpydimpy & ./losertron accordingly
+- `tikmeh --directory ./mp4 profile @shrimpydimpy` – download all @shrimpydimpy videos to `./mp4`
   videos to `./shrimpydimpy`, `./losertron` accordingly
-- `tikmeh directory ./mp4 profile @shrimpydimpy`            – download all @shrimpydimpy videos to `./mp4`
-- `tikmeh profile @shrimpydimpy convert ffmpeg-path ./ffmpeg.exe`    – download and convert videos to h264 with `./ffmpeg.exe`
-- `tikmeh profile @shrimpydimpy check-all`          – download all missing videos, ensure every video is downloaded
+- `tikmeh -d . -c profile --all losertron` – download all losertron videos to current directory, convert to h.264
 
 ### Sync?
 
 Yes, literally synchronization. Just download a profile once in full and Tikmeh wouldn't re-upload already downloaded
-videos.  
+videos.
 
-Note: by default Tikmeh loads the profile until it meets already downloaded video, 
+Note: by default Tikmeh loads the profile until it meets already downloaded video,
 to ensure nothing is skipped, use `check-all` flag.
 By default, directory named after the profile username is created.
 
@@ -35,9 +37,9 @@ Exists mainly for Windows users, which usually don't like to use Terminal, so th
 simple python-like environment.
 
 ```
-Tikmeh 0.1.0 (Sep 26, 2022) Sources and up-to-date executables: https://github.com/mehanon/tikmeh
+Tikmeh (0.2.0 (Nov 4, 2022)) [sources and up-to-date executables: https://github.com/mehanon/tikmeh]
 Enter 'help' to get help message.
->>> directory mp4 tiktok.com/@shrimpydimpy/video/7133412834960018730
+>>> --directory mp4 tiktok.com/@shrimpydimpy/video/7133412834960018730
 mp4/shrimpydimpy_2022-08-19_7133412834960018730.mp4
 >>> profile @losertron
 loading `@losertron` profile...
@@ -61,8 +63,9 @@ go build
 
 1. The name is fucking retarded. Let's pretend it's
    after [Tikmeh (iranian village)](https://en.wikipedia.org/wiki/Tikmeh_Kord)
-2. Windows anti-malware may not allow `tikmeh.exe` to access the internet, in this case administrator rights might help (idk how Windows work). 
-You don't have to trust me, building from sources is always an option.  
+2. Windows anti-malware may not allow `tikmeh.exe` to access the internet, in this case administrator rights might
+   help (idk how Windows work).
+   You don't have to trust me, building from sources is always an option.
 3. Tikmeh depends on tikwm.com/api, which is the main bottleneck (1 request/10 sec is cringe)
 
 ### TODO:
