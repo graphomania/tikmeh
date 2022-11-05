@@ -9,8 +9,8 @@ No installation required, you don't have to use Terminal.
 I was asked to add conversion to `h.264`, so now Tikmeh could access user-provided `ffmpeg`, by default the system's
 one.
 
-- [tikmeh.exe](https://) – Windows (amd64) executable (compatible even with Win7)
-- [tikmeh]() – Linux (amd64) executable
+- [tikmeh.exe](https://github.com/mehanon/tikmeh/raw/main/build/tikmeh.exe) – download Windows (amd64) executable (compatible even with Win7)
+- [tikmeh](https://github.com/mehanon/tikmeh/raw/main/build/tikmeh) – download Linux (amd64) executable
 
 ### Examples:
 
