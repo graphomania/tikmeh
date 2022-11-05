@@ -14,7 +14,7 @@ import (
 
 const (
 	PackageName             = "Tikmeh"
-	VersionInfo             = "0.2.0 (Nov 4, 2022)"
+	VersionInfo             = "0.2.1 (Nov 5, 2022)"
 	GithubLink              = "https://github.com/mehanon/tikmeh"
 	DefaultWorkingDirectory = "."
 )

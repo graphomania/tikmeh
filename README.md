@@ -1,6 +1,6 @@
 ## Tikmeh
 
-#### 0.2.0 (Nov 4, 2022)
+#### 0.2.1 (Nov 5, 2022)
 
 Single executable to **download videos, profiles, sync your collection** with authors in one command with the best
 quality available.
@@ -9,7 +9,8 @@ No installation required, you don't have to use Terminal.
 I was asked to add conversion to `h.264`, so now Tikmeh could access user-provided `ffmpeg`, by default the system's
 one.
 
-- [tikmeh.exe](https://github.com/mehanon/tikmeh/raw/main/build/tikmeh.exe) – download Windows (amd64) executable (compatible even with Win7)
+- [tikmeh.exe](https://github.com/mehanon/tikmeh/raw/main/build/tikmeh.exe) – download Windows (amd64) executable (
+  compatible even with Win7)
 - [tikmeh](https://github.com/mehanon/tikmeh/raw/main/build/tikmeh) – download Linux (amd64) executable
 
 ### Examples:
@@ -57,6 +58,30 @@ Note: requires Golang 1.19+
 git clone https://github.com/mehanon/tikmeh
 cd tikmeh
 go build
+```
+
+### Using Tikwm utilities in your own project
+
+Simply add submodule `import "github.com/mehanon/tikmeh/tikwm"`
+
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/mehanon/tikmeh/tikwm"
+	"log"
+	"strings"
+)
+
+func main() {
+	files, err := tikwm.NewProfileDownloader("kaycoree").Download()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Print(strings.Join(files, "\n"))
+}
+
 ```
 
 ### Caveats
