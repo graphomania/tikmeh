@@ -1,4 +1,4 @@
-module tikmeh
+module github.com/mehanon/tikmeh
 
 go 1.19
 
